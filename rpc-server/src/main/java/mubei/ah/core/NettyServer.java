@@ -34,7 +34,7 @@ public class NettyServer extends Server {
     public NettyServer(String serverAddress, String registryAddress) {
         this.serverAddress = serverAddress;
         // 注册服务的地址
-        this.serviceRegistry = new ServiceRegistry(serverAddress);
+        this.serviceRegistry = new ServiceRegistry(registryAddress);
     }
 
 
@@ -46,7 +46,7 @@ public class NettyServer extends Server {
 
     @Override
     public void start() throws Exception {
-        new Thread(()->{
+        thread = new Thread(()->{
             ThreadPoolExecutor threadPoolExecutor = ThreadPoolUtil.createThreadPool(
                     NettyServer.class.getSimpleName(), 16, 32);
             NioEventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -54,10 +54,9 @@ public class NettyServer extends Server {
 
             try {
                 ServerBootstrap serverBootstrap = new ServerBootstrap();
-
                 serverBootstrap.group(bossGroup,workerGroup)
                         .channel(NioServerSocketChannel.class)
-                        .childHandler(null)
+                        .childHandler(new RpcServerInitializer(serviceMap,threadPoolExecutor))
                         .option(ChannelOption.SO_BACKLOG,128)
                         .childOption(ChannelOption.SO_KEEPALIVE,true);
                 String[] array = serverAddress.split(":");
@@ -76,10 +75,13 @@ public class NettyServer extends Server {
                     logger.error("Rpc server remoting server error", e);
                 }
             } finally {
+                // 注销服务
+                serviceRegistry.unregisterService();
                 workerGroup.shutdownGracefully();
                 bossGroup.shutdownGracefully();
             }
-        }).start();
+        });
+        thread.start();
     }
 
     @Override

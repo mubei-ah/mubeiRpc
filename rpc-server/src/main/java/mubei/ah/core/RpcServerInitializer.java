@@ -5,7 +5,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.timeout.IdleStateHandler;
-import mubei.ah.codec.Beat;
+import mubei.ah.codec.*;
+import mubei.ah.serializer.Serializer;
+import mubei.ah.serializer.kryo.KryoSerializer;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -30,14 +32,19 @@ public class RpcServerInitializer extends ChannelInitializer<SocketChannel> {
 
     @Override
     protected void initChannel(SocketChannel channel) throws Exception {
-
+//        Serializer serializer = ProtostuffSerializer.class.newInstance();
+//        Serializer serializer = HessianSerializer.class.newInstance();
+        Serializer serializer = KryoSerializer.class.newInstance();
         ChannelPipeline cp = channel.pipeline();
         cp
                 .addLast(new IdleStateHandler(0,0, Beat.BEAT_TIMEOUT, TimeUnit.SECONDS))
+                // 编码器
+                .addLast(new RpcEncoder(RpcRequest.class, null))
                 .addLast(new LengthFieldBasedFrameDecoder(65536,0,4,0,0))
-                // 编解码器
+                // 解码器
+                .addLast(new RpcDecoder(RpcRequest.class, serializer))
+                .addLast(new RpcEncoder(RpcResponse.class, serializer))
                 .addLast(new RpcServerHandler(handlerMap,threadPoolExecutor))
                ;
-
     }
 }

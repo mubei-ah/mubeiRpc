@@ -1,0 +1,11 @@
+package mubei.ah.proxy;
+
+/**
+ * @author 帅小伙呀
+ * @date 2023/6/27 17:07
+ */
+@FunctionalInterface
+public interface RpcFunction2<T, P1, P2> extends SerializableFunction<T> {
+    Object apply(T t, P1 p1, P2 p2);
+}
+

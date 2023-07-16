@@ -2,6 +2,8 @@ package mubei.ah;
 
 import mubei.ah.annotation.RpcAutowired;
 import mubei.ah.connect.ConnectionManager;
+import mubei.ah.discovery.ServiceDiscovery;
+import mubei.ah.proxy.ObjectProxy;
 import mubei.ah.util.ThreadPoolUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +13,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -20,17 +23,28 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 public class RpcClient implements ApplicationContextAware, DisposableBean {
     private static final Logger logger = LoggerFactory.getLogger(RpcClient.class);
-
-
-    // TODO: 2023/6/26 服务发现
-
-
+    private ServiceDiscovery serviceDiscovery;
     private static ThreadPoolExecutor threadPoolExecutor = ThreadPoolUtil.createThreadPool(RpcClient.class.getSimpleName(), 8, 16);
 
+//    public static <T, P> T createService(Class<T> interfaceClass, String version) {
+//        return (T) Proxy.newProxyInstance(
+//                interfaceClass.getClassLoader(),
+//                new Class<?>[]{interfaceClass},
+//                new ObjectProxy<T,P>(interfaceClass,version)
+//        );
+//    }
     public static <T, P> T createService(Class<T> interfaceClass, String version) {
-        // TODO: 2023/6/26 返回代理
-        return null;
+        ObjectProxy<T, P> objectProxy = new ObjectProxy<>(interfaceClass, version);
+        // case 用于将一个对象强制转换为指定的接口类型。
+        return interfaceClass.cast(
+                Proxy.newProxyInstance(
+                        interfaceClass.getClassLoader(),
+                        new Class<?>[]{interfaceClass},
+                        objectProxy
+                )
+        );
     }
+
 
     public static void submit(Runnable task) {
         threadPoolExecutor.submit(task);
@@ -38,7 +52,7 @@ public class RpcClient implements ApplicationContextAware, DisposableBean {
 
     public void stop() {
         threadPoolExecutor.shutdown();
-        // TODO: 2023/6/26 服务关闭
+        serviceDiscovery.stop();
         ConnectionManager.getInstance().stop();
     }
 

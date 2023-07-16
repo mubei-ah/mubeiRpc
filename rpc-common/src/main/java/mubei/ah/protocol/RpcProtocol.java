@@ -65,4 +65,8 @@ public class RpcProtocol implements Serializable {
     public void setServiceInfoList(List<RpcServiceInfo> serviceInfoList) {
         this.serviceInfoList = serviceInfoList;
     }
+
+    public List<RpcServiceInfo> getServiceInfoList() {
+        return serviceInfoList;
+    }
 }
